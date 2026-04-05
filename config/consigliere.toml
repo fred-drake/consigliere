@@ -1,0 +1,19 @@
+[watch]
+directory = "/shared/consigliere"
+poll_interval_ms = 500
+stale_request_timeout_ms = 300000
+
+[execution]
+default_timeout_ms = 30000
+max_timeout_ms = 120000
+max_output_bytes = 1048576
+
+[commands.gws]
+path = "/usr/local/bin/gws"
+allowed_subcommands = ["calendar", "gmail", "drive"]
+# List ALL flag forms accepted by the command (both short and long)
+# e.g., include both "-v" and "--verbose" if the command accepts both
+denied_flags = ["--debug", "--verbose", "--token", "--credentials"]
+
+[logging]
+level = "info"
