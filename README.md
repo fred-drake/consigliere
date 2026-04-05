@@ -1,7 +1,7 @@
 # Consigliere
 
 <p align="center">
-  <img src="images/logo.png" alt="Consigliere logo" width="200">
+  <img src="images/logo.png" alt="Consigliere logo" width="400">
 </p>
 
 A file-based command execution bridge for sandboxed AI agents. You drop a JSON request file in a shared directory, consigliere validates it against an allowlist, runs the command (never through a shell), and streams NDJSON output back.
