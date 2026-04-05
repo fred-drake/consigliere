@@ -9,6 +9,5 @@ FROM oven/bun:1-alpine
 WORKDIR /app
 COPY --from=builder /app .
 COPY config/consigliere.toml /etc/consigliere/consigliere.toml
-RUN adduser -D -u 1000 consigliere
-USER consigliere
+USER bun
 ENTRYPOINT ["bun", "run", "src/index.ts"]
