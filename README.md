@@ -44,50 +44,94 @@ Malformed or rejected requests get an error response so the caller doesn't hang 
 
 Output streams as it happens. No waiting for the command to finish.
 
-## Setup
+## Usage
 
-You need [Bun](https://bun.sh/) (or use the Nix flake: `nix develop`) and Docker for production.
+The base image is published to GHCR:
 
-```bash
-bun install
-bun test
-bun start
+```
+ghcr.io/fred-drake/consigliere:latest
+```
+
+Consigliere doesn't ship with any CLI tools — it only provides the execution bridge. You build your own image on top of it and install the tools you want consigliere to run (e.g. `gws`, `kubectl`, `gh`, or anything else).
+
+### Building your image
+
+```dockerfile
+FROM ghcr.io/fred-drake/consigliere:latest
+
+USER root
+
+# Install the tools consigliere will execute
+RUN apk add --no-cache curl git
+COPY --from=your-gws-build /usr/local/bin/gws /usr/local/bin/gws
+
+USER bun
 ```
 
 ### Configuration
 
-Edit `config/consigliere.toml` to define what's allowed:
+Create a `consigliere.toml` that defines which commands are allowed. Only `watch.directory`, the `[logging]` section, and your `[commands.*]` entries are required — everything else has sensible defaults:
 
 ```toml
 [watch]
 directory = "/shared/consigliere"
-poll_interval_ms = 500
+# poll_interval_ms = 500              # optional (default: 500)
+# stale_request_timeout_ms = 300000   # optional (default: 300000)
 
-[execution]
-default_timeout_ms = 30000
-max_timeout_ms = 120000
-max_output_bytes = 1048576
+# [execution]                         # entire section optional
+# default_timeout_ms = 30000          # optional (default: 30000)
+# max_timeout_ms = 120000             # optional (default: 120000)
+# max_output_bytes = 1048576          # optional (default: 1048576)
 
 [commands.gws]
 path = "/usr/local/bin/gws"
-allowed_subcommands = ["calendar", "gmail", "drive"]
-denied_flags = ["--debug", "--verbose", "--token", "--credentials"]
+allowed_subcommands = ["calendar", "gmail", "drive"]  # optional
+denied_flags = ["--debug", "--verbose", "--token", "--credentials"]  # optional
 
 [logging]
-level = "info"
+# level = "info"                      # optional (default: "info")
+```
+
+A minimal config only needs this:
+
+```toml
+[watch]
+directory = "/shared/consigliere"
+
+[commands.gws]
+path = "/usr/local/bin/gws"
+
+[logging]
 ```
 
 All config values can be overridden with environment variables: `CONSIGLIERE_WATCH_DIRECTORY=/alt/path`, `CONSIGLIERE_EXECUTION_DEFAULT_TIMEOUT_MS=60000`, etc.
 
 An empty commands section means everything is rejected. Fail closed by design.
 
-### Docker
+### Running
 
 ```bash
-docker compose up
+docker run --rm \
+  --read-only \
+  --security-opt no-new-privileges:true \
+  --cap-drop ALL \
+  --tmpfs /tmp:size=10M,nosuid,nodev \
+  -v ./consigliere.toml:/etc/consigliere/consigliere.toml:ro \
+  -v ./shared:/shared/consigliere \
+  your-consigliere-image
 ```
 
-The container runs read-only with all capabilities dropped, a non-root user, and PID/memory limits. Config is mounted read-only; the shared directory is the only writable mount.
+The config is mounted at runtime so you can change parameters without rebuilding. The container should run read-only with all capabilities dropped. The shared directory is the only writable mount.
+
+### Development
+
+For local development, you need [Bun](https://bun.sh/) (or use the Nix flake: `nix develop`).
+
+```bash
+bun install
+bun test
+bun start
+```
 
 ## Security
 
